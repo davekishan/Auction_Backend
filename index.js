@@ -3,7 +3,7 @@ const express = require('express')
 const path = require('path')
 const app = express();
 const urlencodedParser = bodyParser.urlencoded({ extended: false })
-const url = 'mongodb://127.0.0.1:27017/myProject';
+const url = 'mongodb+srv://kishancoc99:CH151sRd5btJSCCj@auction.wnk2nws.mongodb.net/Auction';
 const productmodel = require('./module');
 const myproduct = require('./myproduct');
 app.set('view engine', 'ejs');
