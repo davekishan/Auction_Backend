@@ -18,7 +18,12 @@ const expressjson = express.json();
 app.use(cors({
     origin: '*'
 }))
-
+app.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "POST, GET, PUT");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    next();
+})
 app.use('/public', express.static(path.join(__dirname, 'public')))
 
 const pinata = new pinataSDK('90469d3ebd81dbd5829a', 'ec433e45fe70be821a0088fbee129363598a06712a09bc538820da1a12e7b510');
@@ -33,7 +38,7 @@ app.get('/', async (req, res) => {
 
 app.post('/imageupload', expressjson, async (req, res) => {
 
-   
+
     try {
 
         const imageUpload = req?.files?.image;
@@ -55,7 +60,7 @@ app.post('/imageupload', expressjson, async (req, res) => {
 
         })
     } catch (error) {
-        res.json({response:"image not selected"})
+        res.json({ response: "image not selected" })
     }
     // const {tokenid} = req.body;
     // const {image}=req.files;
@@ -64,7 +69,7 @@ app.post('/imageupload', expressjson, async (req, res) => {
 })
 
 app.post('/product', urlencodedParser, expressjson, async (req, res) => {
-    const time=new Date()
+    const time = new Date()
     const { tokenid, name, description, amount, account, price, uri, isToken, timeline } = req.body;
     console.log("account is: " + account)
     const checkUserExists = await productmodel.find({ "tokenid": tokenid })
@@ -72,7 +77,7 @@ app.post('/product', urlencodedParser, expressjson, async (req, res) => {
         res.send('Token Id Is Already Use')
     } else {
 
-        const user = new productmodel({ productid: tokenid, tokenid: tokenid, name: name, description: description, account: account, amount: amount, price: price, uri: uri, saletype: isToken, timeline: timeline,date:time })
+        const user = new productmodel({ productid: tokenid, tokenid: tokenid, name: name, description: description, account: account, amount: amount, price: price, uri: uri, saletype: isToken, timeline: timeline, date: time })
 
         user.save().catch((err) => console.log(err)).then(() => res.json({ message: 'Product Added', product: user }))
 
@@ -82,7 +87,7 @@ app.post('/product', urlencodedParser, expressjson, async (req, res) => {
 
 app.get('/getproduct', async (req, res) => {
     const time = new Date().getTime();
-    const users = await productmodel.find({ sold: false , $or:[{saletype: '0', timeline: {$gt: time}}, {saletype: '1'}] })
+    const users = await productmodel.find({ sold: false, $or: [{ saletype: '0', timeline: { $gt: time } }, { saletype: '1' }] })
     // , timeline: {$gt: time || saletype:'1'} 
     res.json({ product: users })
 })
@@ -122,11 +127,11 @@ app.post('/biding', urlencodedParser, expressjson, async (req, res) => {
 app.post('/buying', urlencodedParser, expressjson, async (req, res) => {
     const { tokenid, account } = req.body;
     const product = await productmodel.findOne({ tokenid: tokenid })
-    const time=new Date()
+    const time = new Date()
 
     if (product.account != account) {
 
-        const product1 = new myproduct({ productid: tokenid, tokenid: tokenid, name: product.name, description: product.description,price: product.price,account: account,creator:product.account, amount: product.amount, uri: product.uri,date:product.date,buy_at:time })
+        const product1 = new myproduct({ productid: tokenid, tokenid: tokenid, name: product.name, description: product.description, price: product.price, account: account, creator: product.account, amount: product.amount, uri: product.uri, date: product.date, buy_at: time })
         product.sold = true;
         product.account = account;
         product.save()
@@ -164,11 +169,11 @@ app.get('/gettoken/:account', urlencodedParser, expressjson, async (req, res) =>
 
 app.post('/claimbid', async (req, res) => {
     const { tokenid, account } = req.body;
-    const time=new Date()
+    const time = new Date()
     const product = await productmodel.findOne({ tokenid: tokenid })
 
     if (product.account != account) {
-        const product1 = new myproduct({ productid: tokenid, tokenid: tokenid,description: product.description,price: product.lastbiding, account: account,creator:product.account, amount: product.amount, uri: product.uri,date:product.date,buy_at:time})
+        const product1 = new myproduct({ productid: tokenid, tokenid: tokenid, description: product.description, price: product.lastbiding, account: account, creator: product.account, amount: product.amount, uri: product.uri, date: product.date, buy_at: time })
         product.sold = true;
         product.save();
         product1.save().catch((err) => console.log(err)).then(() => res.json({ message: 'Product Buy', product: product }))
