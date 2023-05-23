@@ -79,8 +79,9 @@ app.post('/product', urlencodedParser, expressjson, async (req, res) => {
 
         const user = new productmodel({ productid: tokenid, tokenid: tokenid, name: name, description: description, account: account, amount: amount, price: price, uri: uri, saletype: isToken, timeline: timeline, date: time })
 
-        user.save().catch((err) => console.log(err)).then(() => res.json({ message: 'Product Added', product: user }))
-
+        user.save();
+        
+        res.json({ message: 'Product Added', product: user })
     }
 
 })
