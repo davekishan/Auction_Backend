@@ -74,13 +74,13 @@ app.post('/product', urlencodedParser, expressjson, async (req, res) => {
     console.log("account is: " + account)
     const checkUserExists = await productmodel.find({ "tokenid": tokenid })
     if (checkUserExists.length !== 0) {
-        res.send('Token Id Is Already Use')
+        res.json({message:'Token Id Is Already Use'})
     } else {
 
         const user = new productmodel({ productid: tokenid, tokenid: tokenid, name: name, description: description, account: account, amount: amount, price: price, uri: uri, saletype: isToken, timeline: timeline, date: time })
 
         user.save();
-        
+
         res.json({ message: 'Product Added', product: user })
     }
 
