@@ -1,0 +1,75 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/escrow/Escrow.sol";
+
+
+contract Marketplace1 is ERC1155,Escrow {
+   
+    bool public payment_method=true;
+    address public escrowaddress;
+    
+    constructor(address _escrow)  ERC1155(""){
+        escrowaddress=_escrow;
+    }
+    struct token
+    {
+        address owner;
+        saletype _type;
+       
+   
+    }
+    enum saletype
+    {
+        auction,
+        instant
+    }
+
+    mapping(uint=>token) tokeninfo;
+
+    function mintERC1155(uint256 id,uint productid, uint256 amount,uint price,string memory _uri,saletype _type,uint _timeline)
+        public
+        payable
+    {  
+        require(amount>0 && price>0 && bytes(_uri).length>0,"value cannot be null");
+        require(_type==saletype.auction || _type==saletype.instant,"_type must be 0 or 1");
+        _setURI(_uri);
+        tokeninfo[id]=token(msg.sender,_type);
+        _mint(msg.sender, id, amount, "");
+        setApprovalForAll(escrowaddress,true);
+
+
+         (bool place_product,)=escrowaddress.call(abi.encodeWithSignature(
+        "place_product(address,uint256,uint256,uint256,uint256,address,uint256)",tokeninfo[id].owner,
+        id,
+        productid,
+        amount,
+        price,
+        address(this),
+        _timeline
+
+
+    ))  ;  
+
+    require(place_product,"Order not placed");
+
+
+    }
+
+    function getsaletype(uint tokenid) public view returns(saletype)
+    {
+        return tokeninfo[tokenid]._type;
+    }
+    function geturl() public
+    {
+       
+    }
+    function getdata() public{
+
+
+    }
+ 
+}

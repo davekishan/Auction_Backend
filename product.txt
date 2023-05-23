@@ -1,0 +1,124 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
+
+
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "/erc1155updated.sol";
+
+
+contract product is ERC1155Holder{
+    using Counters for Counters.Counter;
+    address admin;
+    Counters.Counter private product_id;
+    Counters.Counter private bid_id;
+    Marketplace1.saletype saletype;
+
+
+    constructor(){
+        admin=payable(msg.sender);
+    }
+
+
+    struct product{
+        address seller;
+        uint tokenid;
+        uint amount;
+        uint price;
+        uint timeline;
+        Marketplace1.saletype saletype;
+    }
+
+    struct bid
+    {
+        address bidder;
+        uint bidValue;
+        uint timestamp;
+    }
+
+
+    mapping(uint=>product) public productmap;
+    mapping(uint=>bid) public product_bid_map;
+   
+    event productplaced(product,uint,uint,address, address);
+    event BidPlaced(bid,uint,uint,address, address);
+    event productBaught(uint,uint,address, address);
+
+
+    function place_product(address owner,uint _product_id,uint _tokenid,uint _amount,uint price,address nft,uint timeline) public
+    {
+     
+        saletype=Marketplace1(nft).getsaletype(_tokenid);
+        uint _timeline=timeline+block.timestamp;
+        productmap[_product_id]=product(owner,_tokenid,_amount,price,_timeline,saletype);
+        IERC1155(nft).safeTransferFrom(owner,address(this),_tokenid , _amount, " ");
+        emit productplaced(productmap[_product_id],_product_id,block.timestamp,msg.sender,address(this));
+    }
+
+
+    function placebid(uint _product_id,uint _bid_value) public
+    {
+        address _owner=productmap[_product_id].seller;
+        require(productmap[_product_id].timeline>=block.timestamp,"Time Line is Over");
+        require(msg.sender!=_owner,"Owner Can not place bid ");
+        require(productmap[_product_id].saletype==Marketplace1.saletype.auction,"This is not instant");
+       
+        if(product_bid_map[_product_id].bidValue < _bid_value)
+        {
+            product_bid_map[_product_id]=bid(msg.sender,_bid_value,block.timestamp);
+        }
+        else
+        {
+            revert("Value is lower than highest bid");
+        }
+       
+        bid_id.increment();
+        product_bid_map[_product_id]=bid(msg.sender,_bid_value,block.timestamp);
+       
+        emit BidPlaced(product_bid_map[_product_id],_product_id,block.timestamp,msg.sender, _owner);
+
+
+    }
+
+
+    function buy_now(uint _product_id,uint amount,address nft_address) public payable
+    {
+        address _seller=productmap[_product_id].seller;
+        uint tokenid=productmap[_product_id].tokenid;
+        uint price=productmap[_product_id].price;
+       
+        require(_seller!=msg.sender,"Seller can not buy token");
+        require(productmap[_product_id].saletype==Marketplace1.saletype.instant,"This is not auction");
+       
+        require(msg.value== price *amount,"Pay price for buy");
+        IERC1155(nft_address).safeTransferFrom(address(this), msg.sender,tokenid , amount, " ");
+        payable(_seller).transfer(msg.value);
+        productmap[_product_id]=product(msg.sender,tokenid,amount,price,block.timestamp,productmap[_product_id].saletype);
+        emit productBaught(_product_id,block.timestamp,msg.sender, address(this));
+        //ERC1155(nft_address).safeTransferFrom(_from, msg.sender, _tokenid, amount, " ");
+    }
+
+
+    function Claimbid(uint _product_id,uint amount,address nft_address) public payable
+    {
+        address _seller=productmap[_product_id].seller;
+        uint bidValue=product_bid_map[_product_id].bidValue;
+
+        require(product_bid_map[_product_id].bidder==msg.sender,"you are not bidder");
+        require(productmap[_product_id].timeline<=block.timestamp,"Time Line is not Over");
+        require(msg.value == bidValue *amount,"Pay Price For Claim");
+     
+        uint _tokenid=productmap[_product_id].tokenid;
+       
+        ERC1155(nft_address).safeTransferFrom(address(this), msg.sender, _tokenid, amount, " ");
+       
+        payable(_seller).transfer(msg.value);
+       
+        emit productBaught(_product_id,block.timestamp,msg.sender, address(this));
+
+
+    }  
+
+
+}
